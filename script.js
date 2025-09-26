@@ -101,45 +101,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 폼 제출 이벤트 처리
-    recordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.textContent = '저장 중...';
+// 폼 제출 이벤트 처리 (교체본)
+recordForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitButton = e.target.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = '저장 중...';
 
-        const formData = new FormData(recordForm);
-        const data = {
-            type: formData.get('type'),
-            date: formData.get('date'),
-            content: formData.get('content'),
-            mood: formData.get('mood'),
-            reaction: formData.get('reaction')
-        };
+  // x-www-form-urlencoded로 전송 → GAS에서 e.parameter로 쉽게 받음
+  const body = new URLSearchParams(new FormData(recordForm));
 
-        try {
-            const response = await fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Apps Script는 no-cors 모드 또는 복잡한 CORS 설정이 필요할 수 있습니다.
-                cache: 'no-cache',
-                redirect: 'follow',
-                body: JSON.stringify(data)
-            });
+  try {
+    const resp = await fetch(WEB_APP_URL, { method: 'POST', body });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-            // no-cors 모드에서는 응답을 직접 읽을 수 없으므로, 성공적으로 전송되었다고 가정합니다.
-            alert('성공적으로 기록되었습니다!');
-            recordForm.reset();
-            dateInput.value = new Date().toISOString().split('T')[0];
-            loadRecords(); // 데이터 다시 불러오기
+    alert('성공적으로 기록되었습니다!');
+    recordForm.reset();
+    dateInput.value = new Date().toISOString().split('T')[0];
+    loadRecords(); // 다시 불러오기
+  } catch (err) {
+    console.error(err);
+    alert('기록 저장 실패: ' + err.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = '기록하기';
+  }
+});
 
-        } catch (error) {
-            console.error('Error submitting record:', error);
-            alert('기록 저장에 실패했습니다. 인터넷 연결을 확인하세요.');
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = '기록하기';
-        }
-    });
 
     // 엑셀 내보내기 이벤트 처리
     exportButton.addEventListener('click', () => {
