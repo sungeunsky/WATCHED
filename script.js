@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Google Apps Script 웹 앱 URL
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyRcFOuCQYxZwAvNe0V6paZ_ADQr3Haq_sIyd9p2YmmPv1vmttoFIZeNsP5cEAeQhOC/exec";
+
     // !!! 중요: README.md 파일을 읽고, 배포된 자신의 Google Apps Script 웹 앱 URL로 변경하세요.
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyRcFOuCQYxZwAvNe0V6paZ_ADQr3Haq_sIyd9p2YmmPv1vmttoFIZeNsP5cEAeQhOC/exec';
 
