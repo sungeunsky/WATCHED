@@ -1,300 +1,171 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+document.addEventListener('DOMContentLoaded', () => {
+    // !!! 중요: README.md 파일을 읽고, 배포된 자신의 Google Apps Script 웹 앱 URL로 변경하세요.
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyRcFOuCQYxZwAvNe0V6paZ_ADQr3Haq_sIyd9p2YmmPv1vmttoFIZeNsP5cEAeQhOC/exec';
 
-:root {
-    --primary-color: #E0E0E0; /* Amber */
-    --secondary-color: #999999; /* Light Pastel Coral */
-    --background-color: #FFFFFF; /* Light Cream */
-    --card-background: #FFFFFF;
-    --text-color: #999999;
-    --border-color: #E0E0E0;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-}
+    const recordForm = document.getElementById('record-form');
+    const recordsContainer = document.getElementById('records-container');
+    const dateInput = document.getElementById('date');
+    const exportButton = document.getElementById('export-excel');
+    const moodChartCanvas = document.getElementById('mood-chart');
+    let recordsCache = []; // 데이터 캐싱
+    let moodChart;
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+    // 페이지 로드 시 오늘 날짜로 기본 설정
+    dateInput.value = new Date().toISOString().split('T')[0];
 
-body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    line-height: 1.2;
-}
+    // 데이터 로드 및 화면 업데이트
+    const loadRecords = async () => {
+        try {
+            const response = await fetch(WEB_APP_URL, { method: 'GET', redirect: 'follow' });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            recordsCache = await response.json();
 
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-}
+            // 서버에서 받은 데이터가 배열인지 확인합니다. 배열이 아니면 Apps Script 에러일 가능성이 높습니다.
+            if (!Array.isArray(recordsCache)) {
+                console.error("Error data received from Google Apps Script:", recordsCache);
+                throw new Error('Google Apps Script에서 에러가 발생했습니다. 개발자 도구(F12)의 Console 탭에서 상세 정보를 확인하세요.');
+            }
+            
+            recordsContainer.innerHTML = '<p>데이터를 불러오는 중...</p>';
+            // 최신순으로 정렬
+            // Timestamp 기준으로 정렬 (더 정확함)
+            recordsCache.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+            
+            recordsContainer.innerHTML = ''; // 로딩 메시지 제거
+            recordsCache.forEach(addRecordToDOM);
+            renderMoodChart();
 
-header {
-    text-align: center;
-    margin-bottom: 40px;
-}
+        } catch (error) {
+            console.error('Error loading records:', error);
+            recordsContainer.innerHTML = `<p style="color: red;">데이터를 불러오는 데 실패했습니다. README.md 파일을 확인하여 설정을 완료했는지 확인하세요.</p>`;
+        }
+    };
 
-header h1 {
-    color: var(--secondary-color);
-    margin-bottom: 10px;
-}
+    // DOM에 기록 목록 행 추가
+    const addRecordToDOM = (record) => {
+        const row = document.createElement('div');
+        row.classList.add('record-row');
 
-#record-form {
-    background-color: var(--card-background);
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 4px 50px var(--shadow-color);
-    margin-bottom: 100px;
-}
+        const moodEmojis = { '행복': '😄', '보통': '😐', '우울': '😔', '분노': '😡' };
+        const typeText = { 'deed': '😊 선행했어요', 'help': '💖 도움받았어요' };
 
-.form-group {
-    margin-bottom: 20px;
-}
+        row.innerHTML = `
+            <div class="record-type ${record.Type}">${typeText[record.Type] || record.Type}</div>
+            <div class="record-content" title="${record.Content}">${record.Content}</div>
+            <div class="record-reaction" title="${record.Reaction}">${record.Reaction || '-'}</div>
+            <div class="record-date">${new Date(record.Date).toLocaleDateString()}</div>
+            <div class="record-mood">${moodEmojis[record.Mood] || ''}</div>
+        `;
+        recordsContainer.appendChild(row);
+    };
 
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 700;
-}
+    // 기분 통계 차트 렌더링
+    const renderMoodChart = () => {
+        const moodCounts = recordsCache.reduce((acc, record) => {
+            acc[record.Mood] = (acc[record.Mood] || 0) + 1;
+            return acc;
+        }, {});
 
-input[type="date"], select, textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: 'Noto Sans KR', sans-serif;
-}
+        const chartData = {
+            labels: Object.keys(moodCounts),
+            datasets: [{
+                label: '기분별 횟수',
+                data: Object.values(moodCounts),
+                backgroundColor: ['#FFC107', '#FF7043', '#8BC34A', '#2196F3', '#9C27B0'],
+                hoverOffset: 4
+            }]
+        };
 
-textarea {
-    resize: vertical;
-}
+        if (moodChart) {
+            moodChart.destroy(); // 기존 차트 파괴
+        }
 
-.mood-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
+        moodChart = new Chart(moodChartCanvas, {
+            type: 'pie',
+            data: chartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: '전체 기분 통계'
+                    }
+                }
+            }
+        });
+    };
 
-.mood-selector input[type="radio"] {
-    display: none;
-}
+    // 폼 제출 이벤트 처리
+    recordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = '저장 중...';
 
-.mood-selector label {
-    padding: 10px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
+        const formData = new FormData(recordForm);
+        const data = {
+            type: formData.get('type'),
+            date: formData.get('date'),
+            content: formData.get('content'),
+            mood: formData.get('mood'),
+            reaction: formData.get('reaction')
+        };
 
-.mood-selector input[type="radio"]:checked + label {
-    background-color: var(--primary-color);
-    color: var(--card-background);
-    border-color: var(--primary-color);
-    font-weight: 700;
-}
+        try {
+            const response = await fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Apps Script는 no-cors 모드 또는 복잡한 CORS 설정이 필요할 수 있습니다.
+                cache: 'no-cache',
+                redirect: 'follow',
+                body: JSON.stringify(data)
+            });
 
-button[type="submit"] {
-    width: 100%;
-    padding: 15px;
-    background-color: var(--secondary-color);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+            // no-cors 모드에서는 응답을 직접 읽을 수 없으므로, 성공적으로 전송되었다고 가정합니다.
+            alert('성공적으로 기록되었습니다!');
+            recordForm.reset();
+            dateInput.value = new Date().toISOString().split('T')[0];
+            loadRecords(); // 데이터 다시 불러오기
 
-button[type="submit"]:hover {
-    background-color: #FF8A65; /* Deeper Pastel Coral */
-}
+        } catch (error) {
+            console.error('Error submitting record:', error);
+            alert('기록 저장에 실패했습니다. 인터넷 연결을 확인하세요.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = '기록하기';
+        }
+    });
 
-.chart-container {
-    max-width: 450px;
-    margin: 0 auto;
-}
+    // 엑셀 내보내기 이벤트 처리
+    exportButton.addEventListener('click', () => {
+        if (recordsCache.length === 0) {
+            alert('내보낼 데이터가 없습니다.');
+            return;
+        }
 
-.stats-section {
-    background-color: var(--card-background);
-    padding: 20px 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    margin-bottom: 40px;
-    text-align: center;
-}
+        // 데이터 시트 생성
+        const worksheet = XLSX.utils.json_to_sheet(recordsCache);
+        // 새 워크북 생성
+        const workbook = XLSX.utils.book_new();
+        // 워크북에 데이터 시트 추가
+        XLSX.utils.book_append_sheet(workbook, worksheet, "우리의 기록");
 
-.stats-section h3 {
-    margin-bottom: 15px;
-    color: var(--secondary-color);
-}
+        // 헤더 스타일링 (선택 사항)
+        const headers = Object.keys(recordsCache[0]);
+        const header_styles = { font: { bold: true } };
+        for(let i = 0; i < headers.length; i++){
+            const cell_ref = XLSX.utils.encode_cell({c:i, r:0});
+            if(worksheet[cell_ref]) {
+                worksheet[cell_ref].s = header_styles;
+            }
+        }
 
-#stats-container {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    flex-wrap: wrap;
-}
+        // 엑셀 파일 내보내기
+        XLSX.writeFile(workbook, "our_kindness_records.xlsx");
+    });
 
-#stats-container p {
-    font-size: 1.1rem;
-}
-
-#stats-container span {
-    font-weight: 700;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.records-section h2 {
-    margin-bottom: 0;
-    text-align: left;
-}
-
-#export-excel {
-    padding: 8px 15px;
-    background-color: var(--primary-color);
-    color: var(--text-color);
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-#export-excel:hover {
-    background-color: #FFD54F; /* Lighter Amber */
-}
-
-.records-section h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: var(--secondary-color);
-}
-
-/* 게시판 목록 스타일 */
-.records-list-container {
-    background-color: var(--card-background);
-    border-radius: 12px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    overflow: hidden; /* 자식 요소의 radius 적용을 위해 */
-}
-
-.records-header, .record-row {
-    display: grid;
-    grid-template-columns: 120px 1fr 120px 100px 80px;  
-    gap: 15px;
-    padding: 15px 20px;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.records-header {
-    font-weight: 700;
-    background-color: #f9f9f9;
-    color: var(--text-color);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.records-header > div:nth-child(3) {
-    /* 반응 헤더 */
-}
-
-.record-row:last-child {
-    border-bottom: none;
-}
-
-.record-row:hover {
-    background-color: #fefcf5;
-}
-
-.record-type.deed {
-    color: #FFC107;
-    font-weight: 700;
-}
-
-.record-type.help {
-    color: #FF7043;
-    font-weight: 700;
-}
-
-.record-content {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.record-date {
-    font-size: 0.9rem;
-    color: #757575;
-    text-align: center;
-}
-
-.record-mood {
-    font-size: 1.2rem;
-    text-align: center;
-}
-
-
-footer {
-    text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
-    font-size: 0.9rem;
-    color: #757575;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .records-header {
-        display: none; /* 모바일에서는 헤더 숨김 */
-    }
-
-    .records-list-container {
-        background-color: transparent;
-        box-shadow: none;
-    }
-
-    .record-row {
-        grid-template-columns: 1fr; /* 1열로 변경 */
-        gap: 10px;
-        margin-bottom: 15px;
-        border-radius: 12px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 15px var(--shadow-color);
-        background-color: var(--card-background);
-        padding: 20px;
-    }
-
-    .record-row > div::before {
-        font-weight: 700;
-        margin-right: 10px;
-        color: var(--secondary-color);
-    }
-
-    .record-type::before { content: '종류: '; }
-    .record-content::before { content: '내용: '; }
-    .record-date::before { content: '날짜: '; }
-    .record-mood::before { content: '기분: '; }
-
-    .record-content {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: initial;
-    }
-
-    .record-date, .record-mood {
-        text-align: left;
-    }
-}
+    // 초기 데이터 로드
+    loadRecords();
+});
