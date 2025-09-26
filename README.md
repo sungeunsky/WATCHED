@@ -34,6 +34,8 @@
     - 브라우저 주소창의 URL에서 `.../d/` 와 `/edit` 사이의 긴 문자열(스프레드시트 ID)을 복사하여 보관합니다.
     - 예: `.../d/1a2b3c4d5e6f7g8h9i0j.../edit` -> `1a2b3c4d5e6f7g8h9i0j...`가 ID입니다.
 
+1SEqYlUb0G03mRGjCXifX40rmznU24EHVn7yWdHw989A
+
 ---
 
 ## 3단계: Google Apps Script 설정 및 배포

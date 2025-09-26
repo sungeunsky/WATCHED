@@ -1,9 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
 
 :root {
-    --primary-color: #ㄸ; /* Amber */
-    --secondary-color: #E0E0E0; /* Light Pastel Coral */
-    --background-color: #999999; /* Light Cream */
+    --primary-color: #E0E0E0; /* Amber */
+    --secondary-color: #999999; /* Light Pastel Coral */
+    --background-color: #FFFFFF; /* Light Cream */
     --card-background: #FFFFFF;
     --text-color: #999999;
     --border-color: #E0E0E0;

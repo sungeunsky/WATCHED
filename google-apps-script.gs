@@ -6,6 +6,39 @@
 //  Google Apps Script (Server-side)
 // ------------------------------------
 
+const SHEET_ID = "여기에_구글시트_ID";
+const SHEET_NAME = "Sheet1";
+
+// GET: 데이터 불러오기
+function doGet() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+  const records = data.map(row => {
+    let record = {};
+    headers.forEach((h, i) => record[h] = row[i]);
+    return record;
+  });
+  return ContentService.createTextOutput(JSON.stringify(records))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// POST: 데이터 저장하기
+function doPost(e) {
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+    const data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      new Date(), data.type, data.date, data.content, data.mood, data.reaction
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: "error", message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 // POST 요청을 처리하여 데이터를 시트에 기록합니다.
 function doPost(e) {
   try {
