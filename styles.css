@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
 
 :root {
-    --primary-color: #FFC107; /* Amber */
-    --secondary-color: #FFAB91; /* Light Pastel Coral */
-    --background-color: #FFF8E1; /* Light Cream */
+    --primary-color: #ㄸ; /* Amber */
+    --secondary-color: #E0E0E0; /* Light Pastel Coral */
+    --background-color: #999999; /* Light Cream */
     --card-background: #FFFFFF;
-    --text-color: #424242;
+    --text-color: #999999;
     --border-color: #E0E0E0;
     --shadow-color: rgba(0, 0, 0, 0.1);
 }
@@ -20,7 +20,7 @@ body {
     font-family: 'Noto Sans KR', sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
-    line-height: 1.6;
+    line-height: 1.2;
 }
 
 .container {
@@ -41,10 +41,10 @@ header h1 {
 
 #record-form {
     background-color: var(--card-background);
-    padding: 30px;
+    padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    margin-bottom: 40px;
+    box-shadow: 0 4px 50px var(--shadow-color);
+    margin-bottom: 100px;
 }
 
 .form-group {
